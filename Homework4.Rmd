@@ -1,0 +1,141 @@
+---
+title: "SDS 315 Homework 4"
+author: "Yash Gupta - yg9449"
+date: "2025-02-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+options(scipen = 999)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+library(mosaic)
+```
+
+Link to Github repository with Rmd file: https://github.com/ygnewyork/SDS_HW4, Some values might be a bit different due to Monte Carlo variability.
+
+\newpage
+
+## Question 1 - Iron Bank
+
+```{r}
+
+flagged_trades <- 70
+
+iron_bank_sim = rbinom(n=100000, size = 2021, prob = 0.024)
+
+p_value_1 <- mean(iron_bank_sim >= flagged_trades)
+
+cat("P-value: ", p_value_1)
+
+hist(iron_bank_sim, main = "Distribution of Flagged Trades (Under Null Hypothesis)", xlab = "Number of Flagged Trades")
+
+```
+The null hypothesis that we are testing is that there is no difference between the proportion of flagged trades at Iron Bank and the baseline 2.4% of other traders according to the SEC, and that any variability is due to randomness instead of something more nefarious occurring. The test statistic is the number of flagged trades within the sample of the transactions, so 70 out of 2021. We measure this against the null hypothesis to see if this value far exceeds the baseline rate. To model this, we do a Monte Carlo simulation 100,000 times to calculate a p-value for this null hypothesis. The p-value identified as a result of this was 0.00191, or about 0.2%, which means that fewer than 0.2% of simulations produced results with 70 or more flagged trades out of 2021. Given the extremely low p-value, it indicates that the 70 observed flagged trades out of 2021 as compared to the null hypothesis of 2.4% is extremely unlikely by random chance alone at 0.2%, supporting the idea to reject the null hypothesis and further investigate Iron Bank for aspects of insider trading.
+
+\newpage
+
+## Question 2 - Health Inspections
+
+```{r}
+
+coded_rests <- 8
+
+gourmet_bites_sim = rbinom(n=100000, size = 50, prob = 0.03)
+
+p_value_2 <- mean(gourmet_bites_sim >= coded_rests)
+
+cat("P-value: ", p_value_2)
+
+hist(gourmet_bites_sim, main = "Distribution of Health Code Violations (Under Null Hypothesis)", xlab = "Number of Health Code Violations")
+
+```
+The null hypothesis that we are testing is that there is no difference between the proportion of restaurants that were cited for a health code violation at Gourmet Bites and the baseline 3% of other restaurants as according to the health department, and that any variability is due to randomness instead of something more nefarious occurring. The test statistic is the number of health-code violated restaurants within the sample of the restaurants, so 8 out of 50. We measure this against the null hypothesis to see if this value far exceeds the baseline rate. To model this, we do a Monte Carlo simulation 100,000 times to calculate a p-value for this null hypothesis. The p-value identified as a result of this was 0.00013, or about 0.013%, which means that fewer than 0.013% of simulations produced results with 8 or more health-code violated restaurants out of 50. Given the extremely low p-value, it indicates that the 8 observed health-code violated restaurants out of 50 as compared to the null hypothesis of 3% is extremely unlikely by random chance alone at 0.013%, supporting the idea to reject the null hypothesis and further investigate Gourmet Bites for their health standards.
+
+\newpage
+
+## Question 3 - Evaluating Jury Selection for Bias
+
+```{r}
+
+observed_jury <- c(85, 56, 59, 27, 13)
+expected_jury_prop <- c(0.30, 0.25, 0.20, 0.15, 0.10)
+
+total_jury <- sum(observed_jury)
+
+expected_jury <- total_jury * expected_jury_prop
+
+chi_square_test <- chisq.test(observed_jury, p = expected_jury_prop)
+
+chi_square_test
+
+```
+The null hypothesis (H0) for this test would be that the distribution of jurors empaneled by the judge matches the county's population proportions. The test statistic (T) would be the chi-squared statistic, which helps to measure the discrepancy between observed and expected frequencies. P(T | H0) is what the p-value is (probability of obtaining a test statistic as extreme as the observed one), assuming the null hypothesis is true. If this p-value is low, such as below the significance level of 0.05, then it means that we can reject the null hypothesis and identify that there is a significant difference between the observed and expected distributions. Since the p-value was about 0.014, it indicates to reject the null hypothesis. We can conclude from this that the distribution of jurors empaneled by this judge is significantly different from the county's population proportions. However, this does not necessarily prove systematic bias in jury selection. Some other explanations that could explain this could be that the county's demographic data could be outdated at the time of the jury selection, where the current demographics look much different than they were based on the previous data. Additionally, some groups may be less likely to respond to jury duty. As well as this, certain groups may be more likely to fall into the automatically exempted categories, or excused for hardship. We can investigate this further by gaining more trials/data points and understanding the rates of participation/exclusion to the jury pool by group status.    
+
+\newpage
+
+## Question 4 - LLM Watermarking
+
+### Part A - the null or reference distribution
+
+```{r}
+
+letter_freq <- read_csv("letter_frequencies.csv")
+brown_sen <- readLines("brown_sentences.txt")
+
+clean_text <- function(text, freq_table) {
+  
+  clean_sentence <- str_replace_all(text, "[^A-Za-z]", "")
+  clean_sentence <- toupper(clean_sentence)
+  
+  observed_counts <- table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  total_letters <- sum(observed_counts)
+  expected_counts <- total_letters * freq_table$Probability
+  chi_squared_stat <- sum((observed_counts - expected_counts)^2 / expected_counts)
+  
+  return(chi_squared_stat)
+}
+
+letter_freq$Probability <- letter_freq$Probability / sum(letter_freq$Probability)
+
+chi_squared_values_a <- sapply(brown_sen, clean_text, freq_table = letter_freq)  
+
+hist(chi_squared_values_a, main = "Distribution of Chi-squared Values for sentences", xlab = "Chi-squared Statistic")
+
+```
+
+### Part B - checking for a watermark
+
+```{r}
+
+sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum's new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker's inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project's effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone's expectations."
+)
+
+sentence_chi_squared <- sapply(sentences, clean_text, freq_table = letter_freq)
+
+p_values <- sapply(sentence_chi_squared, function(x) {
+  sum(chi_squared_values_a > x) / length(chi_squared_values_a)
+})
+
+results_table <- data.frame(
+  Sentence = 1:length(sentences),
+  Chi_Squared = sentence_chi_squared,
+  P_value = round(p_values, 3)
+)
+
+kable(results_table, row.names = FALSE)
+
+```
+The null hypothesis in the experiment is that the letter frequencies in a given sentence follow the same distribution as the letter frequencies in a typical English text. The sentence that is most likely to have been produced by an LLM is sentence 6, which is "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland." This is because this sentence has a high chi-squared statistic of 96.45 which leads to an extremely low p-value of 0.009. This p-value suggests an unlikely sentence as according to the null hypothesis and a significance value of 0.05.
